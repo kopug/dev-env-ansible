@@ -1,0 +1,12 @@
+---
+- name: Install Homebrew packages
+  homebrew:
+    name: "{{ macos_packages }}"
+    state: present
+
+- name: Ensure Homebrew is in PATH
+  lineinfile:
+    path: "{{ ansible_env.HOME }}/.zprofile"
+    line: 'eval "$(/opt/homebrew/bin/brew shellenv)"'
+    create: yes
+  when: ansible_architecture == 'arm64'

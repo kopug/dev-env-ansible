@@ -1,0 +1,12 @@
+---
+# WSL固有設定
+wsl_packages:
+  - socat
+  - iproute2
+  - software-properties-common
+  - build-essential
+  - zsh
+
+# npiperelay設定
+npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
+npiperelay_install_path: "/usr/local/bin/npiperelay.exe"

@@ -1,301 +1,70 @@
 ---
-- name: Setup Git and SSH Agent for WSL Development Environment
+- name: Setup Development Environment
   hosts: localhost
-  tasks:
-    - name: Get real user info (not root)
-      set_fact:
-        # SUDO_USERでsudoを実行した元のユーザーを取得
-        # 存在しない場合はログイン名を使用
-        target_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
-      
-    - name: Set target home directory
-      set_fact:
-        target_home: "/home/{{ target_user }}"
-      
-    - name: Display target user info
-      debug:
-        msg: "Target user: {{ target_user }}, Home: {{ target_home }}"
-    
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-        upgrade: safe
-      become: yes
-
-    - name: Install basic packages
-      apt:
-        name:
-          - curl
-          - wget
-          - unzip
-          - socat
-          - iproute2
-          - git
-          - vim
-          - software-properties-common
-          - build-essential
-          - zsh
-        state: present
-      become: yes
-
-    - name: Add Neovim unstable PPA
-      apt_repository:
-        repo: ppa:neovim-ppa/unstable
-        state: present
-      become: yes
-
-    - name: Update apt cache after adding PPA
-      apt:
-        update_cache: yes
-      become: yes
-
-    - name: Install Neovim
-      apt:
-        name: neovim
-        state: present
-      become: yes
-
-    - name: Check if running in WSL
+  connection: local
+  gather_facts: yes
+  pre_tasks:
+    - name: Check if /proc/version exists (for WSL detection)
       stat:
         path: /proc/version
       register: proc_version_file
+      when: ansible_system == "Linux"
+      tags: always
 
-    - name: Read /proc/version to detect WSL
+    - name: Read /proc/version content for WSL detection
       slurp:
         src: /proc/version
-      register: proc_version
-      when: proc_version_file.stat.exists
+      register: proc_version_content
+      when: ansible_system == "Linux" and proc_version_file.stat.exists
+      tags: always
 
-    - name: Set WSL detection fact
+    - name: Detect WSL environment
       set_fact:
-        is_wsl: "{{ proc_version_file.stat.exists and ('microsoft' in (proc_version.content | b64decode | lower) or 'wsl' in (proc_version.content | b64decode | lower)) }}"
+        is_wsl: >-
+          {{
+            ansible_system == "Linux" and
+            proc_version_file.stat.exists and
+            ('microsoft' in (proc_version_content.content | b64decode | lower) or
+             'wsl' in (proc_version_content.content | b64decode | lower))
+          }}
+      when: ansible_system == "Linux"
+      tags: always
 
-    - name: Display environment type
+    - name: Set is_wsl to false for non-Linux systems
+      set_fact:
+        is_wsl: false
+      when: ansible_system != "Linux"
+      tags: always
+
+    - name: Display detected environment
       debug:
-        msg: "Running in WSL: {{ is_wsl }}"
+        msg: "Detected environment: {{ ansible_system }}{{ ' (WSL)' if is_wsl else '' }}"
+      tags: always
 
-    - name: Configure WSL settings to disable Windows PATH (WSL only)
-      copy:
-        dest: /etc/wsl.conf
-        content: |
-          [interop]
-          appendWindowsPath = false
-        owner: root
-        group: root
-        mode: '0644'
-      when: is_wsl
-      become: yes
+    - name: Set platform group
+      group_by:
+        key: "{{ 'wsl' if is_wsl else ansible_system | lower }}"
+      tags: always
 
-    - name: Create .ssh directory
-      file:
-        path: "{{ target_home }}/.ssh"
-        state: directory
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-        mode: '0700'
-      become: yes
-      become_user: "{{ target_user }}"
+  roles:
+    - role: common
+      tags: common
+    - role: wsl
+      when: ansible_system == "Linux" and is_wsl
+      tags: wsl
+    - role: macos
+      when: ansible_system == "Darwin"
+      tags: macos
 
-    - name: Download npiperelay for SSH Agent bridge (WSL only)
-      get_url:
-        url: https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip
-        dest: /tmp/npiperelay.zip
-      when: is_wsl
-      become: yes
-
-    - name: Extract npiperelay (WSL only)
-      unarchive:
-        src: /tmp/npiperelay.zip
-        dest: /tmp
-        remote_src: yes
-      when: is_wsl
-      become: yes
-
-    - name: Install npiperelay (WSL only)
-      copy:
-        src: /tmp/npiperelay.exe
-        dest: /usr/local/bin/npiperelay.exe
-        mode: '0755'
-        remote_src: yes
-      when: is_wsl
-      become: yes
-
-    - name: Clean up npiperelay zip file (WSL only)
-      file:
-        path: /tmp/npiperelay.zip
-        state: absent
-      when: is_wsl
-      become: yes
-
-    - name: Create SSH config for GitHub
-      blockinfile:
-        path: "{{ target_home }}/.ssh/config"
-        marker: "# {mark} GitHub SSH Config"
-        block: |
-          Host github.com
-              HostName github.com
-              User git
-              Port 22
-              IdentitiesOnly no
-              PreferredAuthentications publickey
-        create: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-        mode: '0600'
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Create Git configuration from template
-      template:
-        src: gitconfig.template
-        dest: "{{ target_home }}/.gitconfig"
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-        mode: '0644'
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Create global gitignore file
-      copy:
-        dest: "{{ target_home }}/.gitignore"
-        content: |
-          # OS generated files
-          .DS_Store
-          .DS_Store?
-          ._*
-          .Spotlight-V100
-          .Trashes
-          ehthumbs.db
-          Thumbs.db
-          
-          # Editor files
-          .vscode/
-          .idea/
-          *.swp
-          *.swo
-          *~
-          
-          # Log files
-          *.log
-          
-          # Temporary files
-          *.tmp
-          *.temp
-          
-          # Node.js
-          node_modules/
-          npm-debug.log*
-          yarn-debug.log*
-          yarn-error.log*
-          
-          # Python
-          __pycache__/
-          *.py[cod]
-          *$py.class
-          *.so
-          .env
-          
-          # Compiled files
-          *.o
-          *.exe
-          *.dll
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-        mode: '0644'
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Change default shell to zsh
-      user:
-        name: "{{ target_user }}"
-        shell: /bin/zsh
-      become: yes
-
-    - name: Clone Prezto framework using shell
-      shell: |
-        git clone --recursive https://github.com/sorin-ionescu/prezto.git "{{ target_home }}/.zprezto"
-      become: yes
-      become_user: "{{ target_user }}"
-      args:
-        creates: "{{ target_home }}/.zprezto"
-
-    - name: Create Prezto configuration symlinks
-      file:
-        src: "{{ target_home }}/.zprezto/runcoms/{{ item }}"
-        dest: "{{ target_home }}/.{{ item }}"
-        state: link
-        force: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-      loop:
-        - zlogin
-        - zlogout
-        - zpreztorc
-        - zprofile
-        - zshenv
-        - zshrc
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Configure SSH Agent bridge in .zshrc (WSL only)
-      blockinfile:
-        path: "{{ target_home }}/.zshrc"
-        marker: "# {mark} SSH Agent Bridge"
-        block: |
-          # SSH Agent Bridge for WSL
-          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
-          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-              rm -f $SSH_AUTH_SOCK
-              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
-          fi
-        create: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-      when: is_wsl
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Set nvim as default editor in zshrc
-      blockinfile:
-        path: "{{ target_home }}/.zshrc"
-        marker: "# {mark} Neovim Editor Settings"
-        block: |
-          # Set Neovim as default editor
-          export EDITOR=nvim
-          export VISUAL=nvim
-          
-          # Neovim aliases
-          alias vi=nvim
-          alias vim=nvim
-        create: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Clone Neovim configuration repository using shell
-      shell: |
-        mkdir -p "{{ target_home }}/.config"
-        git clone https://github.com/kopug/neovim.git "{{ target_home }}/.config/nvim"
-      become: yes
-      become_user: "{{ target_user }}"
-      args:
-        creates: "{{ target_home }}/.config/nvim"
-
-    - name: Display next steps
+  post_tasks:
+    - name: Display completion message
       debug:
         msg:
           - "=== Setup Complete! ==="
+          - "Platform: {{ ansible_system }}{{ ' (WSL)' if is_wsl else '' }}"
           - "Next steps:"
-          - "1. Exit WSL: exit"
-          - "2. Restart WSL: wsl --shutdown && wsl"
-          - "3. IMPORTANT: WSL will restart with Windows PATH disabled for better performance"
-          - "4. Test SSH: ssh-add -l"
-          - "5. Test GitHub: ssh -T git@github.com"
-          - "6. Start Neovim: nvim"
-          - "7. Lazy.nvim will automatically install plugins on first run"
-          - "8. Zsh with Prezto is now your default shell"
-          - "9. Configure Prezto modules in ~/.zpreztorc if needed"
-          - "10. Tab completion should now be much faster!"
+          - "1. Restart your shell session"
+          - "2. Test SSH: ssh-add -l"
+          - "3. Test GitHub: ssh -T git@github.com"
+          - "4. Start Neovim: nvim"
+      tags: always

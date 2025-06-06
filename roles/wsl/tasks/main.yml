@@ -1,0 +1,55 @@
+---
+- name: Install WSL-specific packages
+  apt:
+    name: "{{ wsl_packages }}"
+    state: present
+  become: yes
+  ignore_errors: yes
+  tags: packages
+
+- name: Configure WSL settings
+  template:
+    src: wsl.conf.j2
+    dest: /etc/wsl.conf
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  ignore_errors: yes
+  tags: config
+
+- name: Check if npiperelay already exists
+  stat:
+    path: "{{ npiperelay_install_path }}"
+  register: npiperelay_exists
+  tags: npiperelay
+
+- name: Download and install npiperelay (combined task for reliability)
+  shell: |
+    if [ ! -f "{{ npiperelay_install_path }}" ]; then
+      echo "Installing npiperelay..."
+      cd /tmp
+      curl -L -o npiperelay.zip "{{ npiperelay_url }}" || exit 1
+      unzip -o npiperelay.zip || exit 1
+      sudo cp npiperelay.exe "{{ npiperelay_install_path }}" || exit 1
+      sudo chmod +x "{{ npiperelay_install_path }}" || exit 1
+      rm -f npiperelay.zip npiperelay.exe
+      echo "npiperelay installed successfully"
+    else
+      echo "npiperelay already exists"
+    fi
+  args:
+    creates: "{{ npiperelay_install_path }}"
+  ignore_errors: yes
+  tags: npiperelay
+
+- name: Verify npiperelay installation
+  stat:
+    path: "{{ npiperelay_install_path }}"
+  register: npiperelay_final_check
+  tags: npiperelay
+
+- name: Display npiperelay installation status
+  debug:
+    msg: "npiperelay installation: {{ 'SUCCESS' if npiperelay_final_check.stat.exists else 'FAILED' }}"
+  tags: npiperelay

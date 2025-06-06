@@ -1,0 +1,32 @@
+---
+- name: Change default shell to zsh
+  user:
+    name: "{{ ansible_user_id }}"
+    shell: /bin/zsh
+  become: yes
+
+- name: Clone Prezto framework
+  shell: |
+    git clone --recursive {{ prezto_repo }} "{{ ansible_env.HOME }}/.zprezto"
+  args:
+    creates: "{{ ansible_env.HOME }}/.zprezto"
+
+- name: Create Prezto configuration symlinks
+  file:
+    src: "{{ ansible_env.HOME }}/.zprezto/runcoms/{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.{{ item }}"
+    state: link
+    force: yes
+  loop:
+    - zlogin
+    - zlogout
+    - zpreztorc
+    - zprofile
+    - zshenv
+    - zshrc
+
+- name: Add custom configurations to .zshrc
+  blockinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    marker: "# {mark} Custom Development Environment Settings"
+    block: "{{ lookup('template', 'zshrc_additions.j2') }}"

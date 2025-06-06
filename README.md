@@ -1,365 +1,197 @@
-# WSL Git, SSH Agent, Zsh and Neovim Setup
+# Development Environment Setup with Ansible
 
-WSL環境でGit、Bitwarden SSH Agent、Zsh（Prezto）、Neovimを自動セットアップするためのAnsibleプレイブックです。
+自動化された開発環境セットアップツール。WSL、Linux、macOSに対応したAnsibleプレイブックです。
 
-## 概要
-
-このプロジェクトは以下を自動化します：
-
-- 必要なパッケージのインストール（Git、socat、npirelay、zshなど）
-- Neovimの最新版インストール
-- Zshのインストールとデフォルトシェル変更
-- Preztoフレームワークの設定
-- Bitwarden SSH Agent bridgeの設定
-- GitHubへのSSH接続設定
-- Git全体設定
-- Neovim設定の自動クローン・適用
-
-## 前提条件
-
-- WSL2環境（Ubuntu推奨）
-- Ansibleがインストール済み
-- Windows側でBitwarden SSH Agentが動作している
-- sudoアクセス権限
-
-## インストール
-
-### 0. Ansibleのインストール
+## 🚀 クイックスタート
 
 ```bash
-# システムパッケージの更新
-sudo apt update
+# リポジトリをクローン
+git clone <your-repo-url>
+cd ansible
 
-# Ansibleのインストール
-sudo apt install -y ansible
-
-# バージョン確認
-ansible --version
-```
-
-### 1. リポジトリのクローン
-
-```bash
-git clone https://github.com/kopug/wsl-git-ssh-setup.git
-cd wsl-git-ssh-setup
-```
-
-### 2. 設定ファイルの準備
-
-```bash
-# vars.yml.exampleをコピーして設定
+# 設定ファイルをコピー
 cp vars.yml.example vars.yml
 
-# 自分の情報に編集
-nano vars.yml
-```
+# vars.ymlを編集（GitHubユーザー名、メールアドレスなど）
+vim vars.yml
 
-**vars.yml例:**
-```yaml
-git_user_name: "Your Name"
-git_user_email: "your-email@example.com"
-```
-
-### 3. Ansibleの実行
-
-```bash
+# 開発環境をセットアップ
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass
 ```
 
-## 検証手順
+## 📋 機能
 
-### 1. WSL再起動
+### 共通機能 (All Platforms)
+- **Git設定**: ユーザー情報、エイリアス、グローバルgitignore
+- **SSH設定**: GitHub用SSH設定
+- **Neovim**: 最新版のインストールと設定
+- **Zsh + Prezto**: モダンなシェル環境
+- **開発パッケージ**: curl, wget, unzip, git, vim等
+
+### WSL固有機能
+- **WSL設定**: systemd無効化、ネットワーク設定
+- **SSH Agent Bridge**: npiperelayによるWindows連携
+- **パッケージ**: socat等のWSL必須パッケージ
+
+### macOS固有機能
+- **Homebrew**: パッケージマネージャー
+- **macOS最適化**: Homebrew経由でのツールインストール
+
+## 🔧 部分実行
+
+特定の機能のみを実行したい場合は、タグを使用できます：
+
 ```bash
-exit
-# Windows PowerShellで
-wsl --shutdown
-wsl
+# Git設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags git
+
+# SSH設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags ssh
+
+# Neovim関連のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags neovim
+
+# WSL設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags wsl
+
+# 利用可能なタグ一覧を確認
+ansible-playbook -i inventory.yml playbook.yml --list-tags
 ```
 
-### 2. SSH Agent確認
-```bash
-ssh-add -l
-# 期待する出力: 4096 SHA256:... github - kopug (RSA)
-```
-
-### 3. GitHub接続テスト
-```bash
-ssh -T git@github.com
-# 期待する出力: Hi username! You've successfully authenticated...
-```
-
-### 4. Git操作テスト
-```bash
-# テストリポジトリのクローン
-git clone git@github.com:yourusername/testrepo.git
-```
-
-### 5. Zsh & Prezto動作確認
-```bash
-# デフォルトシェルがzshに変更されていることを確認
-echo $SHELL
-# 期待する出力: /bin/zsh
-
-# Preztoが動作していることを確認
-# プロンプトがカラフルに表示され、補完機能が有効になっている
-```
-
-### 6. Neovim動作確認
-```bash
-# Neovimを起動
-nvim
-
-# 初回起動時にLazy.nvimが自動でプラグインをインストール
-# :checkhealth でNeovimの設定状況を確認可能
-```
-
-## 重要な注意点
-
-### Windows PATHの無効化について
-
-このプレイブックは、zshの補完速度を大幅に改善するため、`/etc/wsl.conf`に以下の設定を追加します：
-
-```ini
-[interop]
-appendWindowsPath = false
-```
-
-**これにより**：
-- ✅ zshの補完が高速化される
-- ✅ Preztoの動作が軽快になる
-- ❌ WSLからWindows側のコマンド（`code.exe`, `explorer.exe`など）が直接実行できなくなる
-
-**Windows側のコマンドを使用したい場合**：
-```bash
-# フルパスで実行
-/mnt/c/Windows/System32/notepad.exe
-
-# またはエイリアスを設定
-alias notepad='/mnt/c/Windows/System32/notepad.exe'
-alias code='/mnt/c/Users/[username]/AppData/Local/Programs/Microsoft\ VS\ Code/Code.exe'
-```
-
-この設定を無効にしたい場合は、`/etc/wsl.conf`を削除またはコメントアウトしてWSLを再起動してください。
-
-## セットアップされる内容
-
-### パッケージ
-- Git
-- Neovim（最新版）
-- Zsh + Prezto フレームワーク
-- socat, npiperelay（SSH Agent Bridge用）
-- 開発に必要な基本ツール
-
-### シェル設定
-- デフォルトシェルをzshに変更
-- Preztoフレームワークの自動設定
-- 高機能な補完とプロンプト
-- Git統合とシンタックスハイライト
-
-### WSL設定
-- `/etc/wsl.conf`でWindows PATHを無効化
-- zsh補完の高速化（Windowsパス検索を回避）
-- WSL固有の最適化設定
-
-### SSH設定
-- Bitwarden SSH Agent bridgeの自動設定
-- GitHub用SSH設定
-- WSL再起動時の自動再接続
-
-### Git設定
-- ユーザー名・メールアドレス
-- カラー設定、エディタ設定
-- 豊富なエイリアス設定
-- グローバル.gitignore
-
-### Neovim設定
-- [kopug/neovim](https://github.com/kopug/neovim)からの設定自動取得
-- Lazy.nvimプラグインマネージャー
-- Treesitterによるシンタックスハイライト
-- 開発効率向上のための設定
-
-## ファイル構成
+## 📁 プロジェクト構造
 
 ```
-├── inventory.yml       # Ansibleインベントリ
+ansible/
+├── group_vars/          # グループ変数
+│   ├── all.yml         # 全プラットフォーム共通設定
+│   ├── wsl.yml         # WSL固有設定
+│   └── macos.yml       # macOS固有設定
+├── roles/              # Ansibleロール
+│   ├── common/         # 共通機能
+│   │   ├── tasks/
+│   │   │   ├── main.yml
+│   │   │   ├── setup_shell.yml
+│   │   │   ├── install_neovim_linux.yml
+│   │   │   └── install_neovim_darwin.yml
+│   │   └── templates/
+│   │       ├── ssh_config.j2
+│   │       ├── gitignore.j2
+│   │       └── zshrc_additions.j2
+│   ├── wsl/            # WSL固有機能
+│   │   ├── tasks/
+│   │   │   └── main.yml
+│   │   └── templates/
+│   │       └── wsl.conf.j2
+│   └── macos/          # macOS固有機能
+│       ├── tasks/
+│       │   └── main.yml
+│       └── templates/
 ├── playbook.yml        # メインプレイブック
-├── gitconfig.template  # Git設定テンプレート
-├── vars.yml.example    # 設定例ファイル
-├── vars.yml           # 個人設定（.gitignoreで除外）
-└── README.md          # このファイル
+├── inventory.yml       # インベントリファイル
+├── vars.yml           # ユーザー設定変数
+└── vars.yml.example   # 設定例
 ```
 
-## 設定される機能
+## ⚙️ 設定
 
-### Zsh & Prezto機能
-- **高機能補完**: コマンド、ファイル、Git補完
-- **美しいプロンプト**: Git状態の表示
-- **シンタックスハイライト**: コマンドライン上でのリアルタイム色付け
-- **履歴検索**: 高度なコマンド履歴機能
-- **エイリアス**: 便利なコマンドエイリアス
-- **モジュール系**: 必要に応じてモジュールを追加可能
-
-### Neovim機能
-- **Lazy.nvim**: 高性能プラグインマネージャー
-- **Treesitter**: 高度なシンタックスハイライト
-- **基本設定**: 行番号、タブ設定、検索設定など
-- **クリップボード連携**: WSLとWindowsのクリップボード共有
-- **エディタエイリアス**: `vi`, `vim`コマンドで`nvim`を起動
-
-### Git エイリアス例
-```bash
-git st          # status -s（短縮ステータス）
-git co          # checkout
-git cb          # checkout -b（新ブランチ作成）
-git ci          # commit
-git up          # pull --rebase
-git log-graph   # グラフ付きログ表示
-```
-
-## トラブルシューティング
-
-### SSH Agentが動作しない
-
-```bash
-# プロセス確認
-ps aux | grep socat
-ps aux | grep npiperelay
-
-# 手動再起動
-pkill socat 2>/dev/null
-pkill npiperelay.exe 2>/dev/null
-export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
-rm -f $SSH_AUTH_SOCK
-(setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
-```
-
-### Neovimプラグインエラー
-
-```bash
-# Neovim内で以下を実行
-:Lazy sync          # プラグインの同期
-:checkhealth        # 健康状態チェック
-:TSUpdate           # Treesitterの更新
-```
-
-### GitHub接続エラー
-
-1. **Bitwarden SSH Agentが動作しているか確認**
-   ```powershell
-   # Windows PowerShellで
-   ssh-add -l
-   ```
-
-2. **GitHubにSSHキーが登録されているか確認**
-   - GitHub Settings → SSH and GPG keys
-   - Bitwardenの公開鍵が登録されていることを確認
-
-3. **SSH設定確認**
-   ```bash
-   cat ~/.ssh/config
-   # IdentitiesOnly no が設定されていることを確認
-   ```
-
-## カスタマイズ
-
-### Neovim設定の更新
-
-設定を更新したい場合：
-
-```bash
-cd ~/.config/nvim
-git pull origin main
-nvim
-# :Lazy sync でプラグインを更新
-```
-
-### zsh補完が遅い場合
-
-通常は自動で設定されますが、もし補完が遅い場合：
-
-```bash
-# /etc/wsl.confの内容を確認
-cat /etc/wsl.conf
-
-# 以下が設定されていることを確認
-# [interop]
-# appendWindowsPath = false
-
-# 設定後は必ずWSLを完全に再起動
-exit
-# PowerShellで
-wsl --shutdown
-wsl
-```
-
-### Preztoのカスタマイズ
-
-Preztoの設定は`~/.zpreztorc`で行います：
-
-```bash
-# 使用するモジュールを設定
-zstyle ':prezto:load' pmodule \
-  'environment' \
-  'terminal' \
-  'editor' \
-  'history' \
-  'directory' \
-  'spectrum' \
-  'utility' \
-  'completion' \
-  'prompt' \
-  'syntax-highlighting' \
-  'history-substring-search' \
-  'git'
-
-# プロンプトテーマを変更
-zstyle ':prezto:module:prompt' theme 'sorin'
-```
-
-利用可能なテーマ一覧：
-```bash
-prompt -l
-```
-
-### 独自のNeovim設定を使用
-
-`playbook.yml`の以下の部分を編集：
+### vars.yml の設定例
 
 ```yaml
-- name: Clone Neovim configuration repository
-  git:
-    repo: https://github.com/yourusername/your-neovim-config.git  # <- 変更
-    dest: "{{ target_home }}/.config/nvim"
-    force: yes
+# Git設定
+git_user_name: "Your Name"
+git_user_email: "your-email@example.com"
+
+# GitHub設定
+github_username: "your-github-username"
+
+# リポジトリ設定
+neovim_config_repo: "https://github.com/your-username/neovim.git"
+
+# 開発環境（gitignoreに影響）
+development_environments:
+  - node
+  - python
+  - go
+  # - rust
+  # - java
+
+# WSL設定
+wsl_systemd: false
+npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
 ```
 
-### 異なるGitサービスの追加
+## 🔍 トラブルシューティング
 
-`.ssh/config`に他のGitサービスの設定を追加：
+### 構文チェック
+```bash
+ansible-playbook --syntax-check -i inventory.yml playbook.yml
+```
+
+### ドライラン（変更せずに確認）
+```bash
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --check --diff --ask-become-pass
+```
+
+### 詳細ログで実行
+```bash
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass -v
+```
+
+### WSL環境の確認
+```bash
+# WSL検出確認
+cat /proc/version | grep -i microsoft && echo "This is WSL" || echo "This is not WSL"
+
+# SSH Agent確認
+ssh-add -l
+
+# GitHub接続テスト
+ssh -T git@github.com
+```
+
+## 📋 セットアップ後の確認
 
 ```bash
-Host gitlab.com
-    HostName gitlab.com
-    User git
-    Port 22
-    IdentitiesOnly no
-    PreferredAuthentications publickey
+# 新しいシェルセッション開始
+zsh
+
+# 環境変数確認
+echo $SHELL    # /usr/bin/zsh
+echo $EDITOR   # nvim
+
+# Git設定確認
+git config --list --global
+
+# Neovim確認
+nvim --version
+
+# SSH設定確認
+cat ~/.ssh/config
 ```
 
-## ライセンス
+## 🔄 新しいマシンでの使用
+
+1. このリポジトリをクローン
+2. `vars.yml.example`を`vars.yml`にコピーして編集
+3. `ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass`を実行
+
+数分で同じ開発環境が構築されます！
+
+## 🤝 カスタマイズ
+
+### 新しい開発言語の追加
+`group_vars/all.yml`の`development_environments`に言語を追加し、`roles/common/templates/gitignore.j2`にパターンを追加してください。
+
+### プラットフォーム固有設定の追加
+各プラットフォーム用のロール（`roles/wsl/`, `roles/macos/`）にタスクを追加してください。
+
+### パッケージの追加
+`group_vars/`の各ファイルでパッケージリストを編集してください。
+
+## 📝 ライセンス
 
 MIT License
 
-## 貢献
+## 🙋‍♂️ サポート
 
-バグ報告や機能改善の提案はIssueまたはPull Requestでお願いします。
-
-## 参考
-
-- [Bitwarden SSH Agent](https://bitwarden.com/help/ssh-agent/)
-- [npiperelay](https://github.com/jstarks/npiperelay)
-- [WSL SSH Agent Bridge](https://docs.microsoft.com/en-us/windows/wsl/tutorials/wsl-git)
-- [Neovim](https://neovim.io/)
-- [Lazy.nvim](https://github.com/folke/lazy.nvim)
-- [Prezto](https://github.com/sorin-ionescu/prezto)
-- [Zsh](https://www.zsh.org/)
+質問や問題がある場合は、GitHubのIssuesでお知らせください。

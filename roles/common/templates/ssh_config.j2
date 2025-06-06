@@ -1,0 +1,12 @@
+# GitHub SSH Config
+Host github.com
+    HostName github.com
+    User git
+    Port 22
+    IdentitiesOnly no
+    PreferredAuthentications publickey
+{% if ansible_system == "Linux" and is_wsl %}
+    # WSL specific settings can be added here if needed
+{% elif ansible_system == "Darwin" %}
+    # macOS specific settings can be added here if needed
+{% endif %}

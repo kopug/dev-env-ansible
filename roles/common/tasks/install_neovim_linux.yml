@@ -1,0 +1,17 @@
+---
+- name: Add Neovim unstable PPA
+  apt_repository:
+    repo: "{{ neovim_ppa }}"
+    state: present
+  become: yes
+
+- name: Update apt cache after adding PPA
+  apt:
+    update_cache: yes
+  become: yes
+
+- name: Install Neovim
+  apt:
+    name: neovim
+    state: present
+  become: yes

@@ -1,0 +1,61 @@
+---
+# 共通設定
+git_user_name: "{{ git_user_name | default('Your Name') }}"
+git_user_email: "{{ git_user_email | default('your-email@example.com') }}"
+editor: nvim
+
+# リポジトリ設定
+prezto_repo: "https://github.com/sorin-ionescu/prezto.git"
+neovim_config_repo: "https://github.com/kopug/neovim.git"
+
+# WSL設定
+wsl_systemd: false
+wsl_generate_hosts: true
+wsl_generate_resolv_conf: true
+
+# 共通パッケージ
+common_packages:
+  - curl
+  - wget
+  - unzip
+  - git
+  - vim
+
+# エディタ設定
+neovim_ppa: "ppa:neovim-ppa/unstable"
+
+# 開発環境設定（gitignoreに影響）
+development_environments:
+  - node
+  - python
+  - go
+  # - rust
+  # - java
+
+# カスタムgitignoreパターン
+custom_gitignore_patterns:
+  - "# Project specific"
+  - "*.local"
+  - ".env.local"
+  # 必要に応じて追加
+
+# Git設定
+git_config:
+  user:
+    name: "{{ git_user_name }}"
+    email: "{{ git_user_email }}"
+  color:
+    ui: auto
+  push:
+    default: simple
+  core:
+    excludesfile: "~/.gitignore"
+    editor: "{{ editor }}"
+    autocrlf: false
+  alias:
+    st: "status -s"
+    co: "checkout"
+    br: "branch"
+    ci: "commit"
+    df: "diff"
+    lg: "log --oneline --graph"

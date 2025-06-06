@@ -1,0 +1,14 @@
+---
+# macOS固有設定
+macos_packages:
+  - zsh
+  - socat
+
+# Homebrew設定
+homebrew_packages:
+  - neovim
+  - git
+  - zsh
+
+# macOS固有パス
+homebrew_prefix: "{{ '/opt/homebrew' if ansible_architecture == 'arm64' else '/usr/local' }}"

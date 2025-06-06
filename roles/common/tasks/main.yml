@@ -1,0 +1,99 @@
+---
+- name: Install common packages
+  package:
+    name: "{{ common_packages }}"
+    state: present
+  become: yes
+  ignore_errors: no
+  tags: packages
+
+- name: Create .ssh directory
+  file:
+    path: "{{ ansible_env.HOME }}/.ssh"
+    state: directory
+    mode: '0700'
+  tags: ssh
+
+- name: Create SSH config for GitHub
+  template:
+    src: ssh_config.j2
+    dest: "{{ ansible_env.HOME }}/.ssh/config"
+    mode: '0600'
+  tags: ssh
+
+- name: Configure Git user settings
+  git_config:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop:
+    - { key: "user.name", value: "{{ git_config.user.name }}" }
+    - { key: "user.email", value: "{{ git_config.user.email }}" }
+  ignore_errors: yes
+  tags: git
+
+- name: Configure Git color settings
+  git_config:
+    name: "color.ui"
+    value: "{{ git_config.color.ui }}"
+    scope: global
+  ignore_errors: yes
+  tags: git
+
+- name: Configure Git push settings
+  git_config:
+    name: "push.default"
+    value: "{{ git_config.push.default }}"
+    scope: global
+  ignore_errors: yes
+  tags: git
+
+- name: Configure Git core settings
+  git_config:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop:
+    - { key: "core.excludesfile", value: "{{ git_config.core.excludesfile }}" }
+    - { key: "core.editor", value: "{{ git_config.core.editor }}" }
+    - { key: "core.autocrlf", value: "{{ git_config.core.autocrlf }}" }
+  ignore_errors: yes
+  tags: git
+
+- name: Configure Git aliases
+  git_config:
+    name: "alias.{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop: "{{ git_config.alias | dict2items }}"
+  ignore_errors: yes
+  tags: git
+
+- name: Create global gitignore from template
+  template:
+    src: gitignore.j2
+    dest: "{{ ansible_env.HOME }}/.gitignore"
+    mode: '0644'
+  ignore_errors: yes
+  tags: git
+
+- name: Install Neovim
+  include_tasks: "install_neovim_{{ ansible_system | lower }}.yml"
+  ignore_errors: yes
+  tags: neovim
+
+- name: Setup shell environment
+  include_tasks: setup_shell.yml
+  ignore_errors: yes
+  tags: shell
+
+- name: Clone Neovim configuration
+  shell: |
+    if [ ! -d "{{ ansible_env.HOME }}/.config/nvim" ]; then
+      mkdir -p "{{ ansible_env.HOME }}/.config"
+      git clone {{ neovim_config_repo }} "{{ ansible_env.HOME }}/.config/nvim"
+    fi
+  args:
+    creates: "{{ ansible_env.HOME }}/.config/nvim"
+  ignore_errors: yes
+  tags: neovim
