@@ -6,8 +6,8 @@
 
 ```bash
 # リポジトリをクローン
-git clone <your-repo-url>
-cd ansible
+git clone https://github.com/kopug/dev-env-ansible.git
+cd dev-env-ansible
 
 # 設定ファイルをコピー
 cp vars.yml.example vars.yml
@@ -61,7 +61,7 @@ ansible-playbook -i inventory.yml playbook.yml --list-tags
 ## 📁 プロジェクト構造
 
 ```
-ansible/
+dev-env-ansible/
 ├── group_vars/          # グループ変数
 │   ├── all.yml         # 全プラットフォーム共通設定
 │   ├── wsl.yml         # WSL固有設定
