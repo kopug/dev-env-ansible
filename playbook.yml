@@ -15,6 +15,7 @@
     - name: Display target user info
       debug:
         msg: "Target user: {{ target_user }}, Home: {{ target_home }}"
+    
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -30,6 +31,7 @@
           - socat
           - iproute2
           - git
+          - vim
         state: present
       become: yes
 
@@ -131,19 +133,63 @@
       become: yes
       become_user: "{{ target_user }}"
 
-    - name: Set Git user name
-      community.general.git_config:
-        name: user.name
-        value: "{{ git_user_name | default('Your Name') }}"
-        scope: global
+    - name: Create Git configuration from template
+      template:
+        src: gitconfig.template
+        dest: "{{ target_home }}/.gitconfig"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
       become: yes
       become_user: "{{ target_user }}"
 
-    - name: Set Git user email
-      community.general.git_config:
-        name: user.email
-        value: "{{ git_user_email | default('your-email@example.com') }}"
-        scope: global
+    - name: Create global gitignore file
+      copy:
+        dest: "{{ target_home }}/.gitignore"
+        content: |
+          # OS generated files
+          .DS_Store
+          .DS_Store?
+          ._*
+          .Spotlight-V100
+          .Trashes
+          ehthumbs.db
+          Thumbs.db
+          
+          # Editor files
+          .vscode/
+          .idea/
+          *.swp
+          *.swo
+          *~
+          
+          # Log files
+          *.log
+          
+          # Temporary files
+          *.tmp
+          *.temp
+          
+          # Node.js
+          node_modules/
+          npm-debug.log*
+          yarn-debug.log*
+          yarn-error.log*
+          
+          # Python
+          __pycache__/
+          *.py[cod]
+          *$py.class
+          *.so
+          .env
+          
+          # Compiled files
+          *.o
+          *.exe
+          *.dll
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0644'
       become: yes
       become_user: "{{ target_user }}"
 
