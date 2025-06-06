@@ -1,10 +1,10 @@
-# Git設定
+# Git設定（必須）
 git_config:
   user:
     name: "Your Name"
     email: "your-email@example.com"
 
-# リポジトリ設定
+# Neovim設定リポジトリ（オプション）
 neovim_config_repo: "https://github.com/your-username/neovim.git"
 
 # 開発環境（gitignoreに影響）
@@ -14,4 +14,10 @@ development_environments:
   - go
   # - rust
   # - java
-  # - docker
+
+# カスタムgitignoreパターン（オプション）
+custom_gitignore_patterns:
+  - "# Project specific"
+  - "*.local" 
+  - ".env.local"
+  # 必要に応じて追加

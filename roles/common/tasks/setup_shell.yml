@@ -7,7 +7,7 @@
 
 - name: Clone Prezto framework
   shell: |
-    git clone --recursive {{ prezto_repo }} "{{ ansible_env.HOME }}/.zprezto"
+    git clone --recursive https://github.com/sorin-ionescu/prezto.git "{{ ansible_env.HOME }}/.zprezto"
   args:
     creates: "{{ ansible_env.HOME }}/.zprezto"
 

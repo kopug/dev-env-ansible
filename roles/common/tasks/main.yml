@@ -1,9 +1,10 @@
 ---
 - name: Install common packages
   apt:
-    name: "{{ common_packages }}"
+    name: ["curl", "wget", "unzip", "git", "vim", "zsh"]
     state: present
   become: yes
+  when: ansible_system == "Linux"
   ignore_errors: yes
   tags: packages
 

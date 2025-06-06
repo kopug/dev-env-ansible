@@ -1,19 +1,19 @@
-# WSL-specific variables
+---
+# WSL固有パッケージ
 wsl_packages:
   - socat
   - iproute2
   - dnsutils
   - net-tools
 
-# npiperelay settings
+# npiperelay設定
 npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
 npiperelay_install_path: "/usr/local/bin/npiperelay.exe"
 
-# WSL configuration
+# WSL設定（wsl.conf.j2で実際に使用される変数のみ）
 wsl_systemd: false
-wsl_append_windows_path: false
 wsl_generate_hosts: true
 wsl_generate_resolv_conf: true
 
-# GitHub CLI settings
+# GitHub CLI設定
 github_cli_enabled: true
