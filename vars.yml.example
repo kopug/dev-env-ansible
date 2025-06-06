@@ -1,2 +1,17 @@
-git_user_name: "Your Name"
-git_user_email: "your-email@example.com"
+# Git設定
+git_config:
+  user:
+    name: "Your Name"
+    email: "your-email@example.com"
+
+# リポジトリ設定
+neovim_config_repo: "https://github.com/your-username/neovim.git"
+
+# 開発環境（gitignoreに影響）
+development_environments:
+  - node
+  - python
+  - go
+  # - rust
+  # - java
+  # - docker

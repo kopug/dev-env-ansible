@@ -1,0 +1,88 @@
+[user]
+  name = {{ git_config.user.name }}
+  email = {{ git_config.user.email }}
+
+[color]
+  ui = auto                   # すべてのGit操作でカラーを自動的に適用
+
+[push]
+  default = simple             # 最新のGit推奨設定、'tracking' は非推奨
+
+[core]
+  excludesfile = ~/.gitignore  # Globalの.gitignoreファイル
+  editor = nvim                # エディタをnvimに設定
+
+[alias]
+  # ステータス関連
+  st = status -s               # ショートステータス表示
+  sta = status                 # 通常のステータス表示
+  sh = show                    # Gitオブジェクトを表示
+  so = remote show origin      # originのリモート情報を表示
+  ft = fetch                   # fetchを簡略化
+  up = pull --rebase           # pullしつつrebase
+  rbm = rebase master          # masterブランチへのrebase
+  ad = add                     # 簡略化されたaddコマンド
+  ci = commit                  # 簡略化されたcommitコマンド
+  cam = commit -a --amend      # 直前のcommitを修正
+  co = checkout                # checkoutの短縮
+  cb = checkout -b             # 新しいブランチを作成してチェックアウト
+  cm = checkout master         # masterブランチに戻る
+
+  # ブランチ関連
+  br = branch                  # ブランチのリストを表示
+  ba = branch -a               # リモートを含む全てのブランチを表示
+  bm = branch --merged         # マージ済みのブランチを表示
+  bn = branch --no-merged      # 未マージのブランチを表示
+  bo = branch -r               # リモートブランチを表示
+
+  # ログ関連
+  wc = whatchanged             # 変更されたファイルと共にログを表示
+  ls = log --stat              # 変更ファイル付きのログを表示
+  lp = log -p                  # diff付きのログを表示
+  la = log --pretty="format:%ad %h (%an): %s" --date=short  # 簡略化されたログ
+  lr = log origin              # リモートのログを表示
+  oneline = log --pretty=oneline  # 1行ごとのログ表示
+  ranking = shortlog -s -n --no-merges  # コミット数ランキング
+
+  # ログのツリー表示
+  log-graph = log --graph --date=short --pretty=format:'%Cgreen%h %cd %Cblue%cn %Creset%s'
+  log-all = log --graph --all --color --pretty='%x09%h %cn%x09%s %Cred%d%Creset'
+
+  # diff関連
+  df = diff                    # 通常のdiff
+  dm = diff master             # masterブランチとのdiff
+  dw = diff --color-words      # 単語単位のカラフルなdiff
+  dc = diff --cached           # ステージングされているものとのdiff
+  ds = diff --staged           # ステージングされたものとのdiff（新しいGitバージョン）
+  d1 = diff HEAD~              # 1つ前のコミットとのdiff
+  d2 = diff HEAD~~             # 2つ前のコミットとのdiff
+  d3 = diff HEAD~~~            # 3つ前のコミットとのdiff
+  d4 = diff HEAD~~~~           # 4つ前のコミットとのdiff
+  d5 = diff HEAD~~~~~          # 5つ前のコミットとのdiff
+  d10 = diff HEAD~~~~~~~~~~    # 10個前のコミットとのdiff
+
+  # マージ関連
+  edit-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; vim `f`"
+  add-unmerged = "!f() { git ls-files --unmerged | cut -f2 | sort -u ; }; git add `f`"
+
+  # grep関連
+  gr = grep                    # 通常のgrep
+  gn = grep -n                 # 行番号付きのgrep
+
+  # サブモジュール関連
+  sm = submodule               # サブモジュール関連の操作を簡略化
+  sma = submodule add
+  smi = submodule update --init
+  smu = submodule foreach "git checkout master; git pull origin master"
+  smupdate = submodule foreach "git checkout master; git pull origin master"
+
+  # その他
+  show-graph = log --graph --abbrev-commit --pretty=oneline
+  feature = flow feature
+  release = flow release
+  hotfix = flow hotfix
+  hooks = hooks
+  ticket = ticket
+
+[http]
+  sslVerify = false             # SSL検証を無効化（セキュリティリスクを考慮）
