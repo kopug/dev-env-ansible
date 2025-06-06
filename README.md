@@ -1,136 +1,87 @@
-# Development Environment Setup with Ansible
+# 🛠️ Development Environment Setup with Ansible
 
-自動化された開発環境セットアップツール。WSL、Linux、macOSに対応したAnsibleプレイブックです。
+このリポジトリは、Ansible を使用して開発環境を自動セットアップするためのプレイブックです。macOS と WSL (Windows Subsystem for Linux) の両方に対応しています。
+
+## ✨ 特徴
+
+- **クロスプラットフォーム対応**: macOS と WSL の両方をサポート
+- **GitHub CLI 統合**: WSL環境での認証を自動化
+- **完全自動化**: 一度のコマンドで開発環境が整う
+- **Git設定の完全管理**: エイリアス、設定を含む完全な`.gitconfig`
+- **モジュラー設計**: 必要な機能だけを選択して実行可能
+- **冪等性保証**: 何度実行しても安全
 
 ## 🚀 クイックスタート
 
-### 初回セットアップ（認証方法を選択）
-
-#### Option A: Personal Access Token を使用
 ```bash
-# 1. GitHub で Personal Access Token を作成
-# GitHub → Settings → Developer settings → Personal access tokens → Generate new token
-# Scopes: 'repo' にチェックを入れる
-
-# 2. トークンを使ってクローン
-git clone https://kopug:YOUR_TOKEN@github.com/kopug/dev-env-ansible.git
+# リポジトリをクローン
+git clone https://github.com/kopug/dev-env-ansible.git
 cd dev-env-ansible
-```
 
-#### Option B: SSH Key を使用  
-```bash
-# 1. SSH鍵を生成
-ssh-keygen -t ed25519 -C "your-email@example.com"
-
-# 2. 公開鍵をコピー
-cat ~/.ssh/id_ed25519.pub
-
-# 3. GitHub → Settings → SSH and GPG keys → New SSH key で公開鍵を追加
-
-# 4. SSH経由でクローン
-git clone git@github.com:kopug/dev-env-ansible.git
-cd dev-env-ansible
-```
-
-### セットアップ実行
-```bash
-
-# 設定ファイルをコピー
+# 設定ファイルを作成
 cp vars.yml.example vars.yml
+vim vars.yml  # 個人情報を設定
 
-# vars.ymlを編集（GitHubユーザー名、メールアドレスなど）
-vim vars.yml
-
-# 開発環境をセットアップ
+# セットアップ実行
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass
 ```
 
-## 📋 機能
+## 🔧 事前準備
 
-### 共通機能 (All Platforms)
-- **Git設定**: ユーザー情報、エイリアス、グローバルgitignore
-- **SSH設定**: GitHub用SSH設定
-- **Neovim**: 最新版のインストールと設定
-- **Zsh + Prezto**: モダンなシェル環境
-- **開発パッケージ**: curl, wget, unzip, git, vim等
+### Ansibleのインストール
 
-### WSL固有機能
-- **WSL設定**: systemd無効化、ネットワーク設定
-- **SSH Agent Bridge**: npiperelayによるWindows連携
-- **パッケージ**: socat等のWSL必須パッケージ
-
-### macOS固有機能
-- **Homebrew**: パッケージマネージャー
-- **macOS最適化**: Homebrew経由でのツールインストール
-
-## 🔧 部分実行
-
-特定の機能のみを実行したい場合は、タグを使用できます：
-
+#### Ubuntu/WSL
 ```bash
-# Git設定のみ
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags git
-
-# SSH設定のみ
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags ssh
-
-# Neovim関連のみ
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags neovim
-
-# WSL設定のみ
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags wsl
-
-# 利用可能なタグ一覧を確認
-ansible-playbook -i inventory.yml playbook.yml --list-tags
+sudo apt update
+sudo apt install ansible
 ```
 
-## 📁 プロジェクト構造
+#### macOS
+```bash
+# Homebrewがない場合
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-```
-ansible/
-├── group_vars/          # グループ変数
-│   ├── all.yml         # 全プラットフォーム共通設定
-│   ├── wsl.yml         # WSL固有設定
-│   └── macos.yml       # macOS固有設定
-├── roles/              # Ansibleロール
-│   ├── common/         # 共通機能
-│   │   ├── tasks/
-│   │   │   ├── main.yml
-│   │   │   ├── setup_shell.yml
-│   │   │   ├── install_neovim_linux.yml
-│   │   │   └── install_neovim_darwin.yml
-│   │   └── templates/
-│   │       ├── ssh_config.j2
-│   │       ├── gitignore.j2
-│   │       └── zshrc_additions.j2
-│   ├── wsl/            # WSL固有機能
-│   │   ├── tasks/
-│   │   │   └── main.yml
-│   │   └── templates/
-│   │       └── wsl.conf.j2
-│   └── macos/          # macOS固有機能
-│       ├── tasks/
-│       │   └── main.yml
-│       └── templates/
-├── playbook.yml        # メインプレイブック
-├── inventory.yml       # インベントリファイル
-├── vars.yml           # ユーザー設定変数
-└── vars.yml.example   # 設定例
+# Ansibleインストール
+brew install ansible
 ```
 
-## ⚙️ 設定
+## 📦 インストールされるもの
 
-### vars.yml の設定例
+### 共通 (macOS/WSL)
+- **Git**: 完全な設定とエイリアス
+- **Neovim**: エディタとプラグイン環境
+- **Zsh**: シェル環境の改善
+- **開発ツール**: 基本的なコマンドラインツール
 
+### WSL 固有
+- **GitHub CLI**: ブラウザ認証統合
+- **WSL Utilities**: Windows連携ツール
+- **npiperelay**: SSH Agent連携
+
+### macOS 固有
+- **Homebrew**: パッケージマネージャー
+- **macOS専用ツール**: システム最適化
+
+## 🔧 カスタマイズ
+
+### 設定ファイルの編集
+```bash
+# サンプルから個人設定を作成
+cp vars.yml.example vars.yml
+
+# 個人情報を設定
+vim vars.yml
+```
+
+### vars.yml の設定項目
 ```yaml
-# Git設定
-git_user_name: "Your Name"
-git_user_email: "your-email@example.com"
+# Git設定（必須）
+git_config:
+  user:
+    name: "Your Name"
+    email: "your-email@example.com"
 
-# GitHub設定
-github_username: "your-github-username"
-
-# リポジトリ設定
+# Neovim設定リポジトリ（オプション）
 neovim_config_repo: "https://github.com/your-username/neovim.git"
 
 # 開発環境（gitignoreに影響）
@@ -138,81 +89,128 @@ development_environments:
   - node
   - python
   - go
-  # - rust
-  # - java
-
-# WSL設定
-wsl_systemd: false
-npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
 ```
 
-## 🔍 トラブルシューティング
+## 🎯 セレクティブ実行
 
-### 構文チェック
+特定の機能のみ実行する場合：
+
 ```bash
-ansible-playbook --syntax-check -i inventory.yml playbook.yml
+# Git設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags git
+
+# GitHub CLI設定のみ (WSL)
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags github-cli
+
+# Neovim設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags neovim
+
+# シェル設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags shell
 ```
 
-### ドライラン（変更せずに確認）
+## 🔐 認証設定
+
+### GitHub CLI (WSL)
+セットアップ後、GitHub CLI で認証を行います：
+
 ```bash
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --check --diff --ask-become-pass
+# 認証開始
+gh auth login
+
+# 設定選択
+# → GitHub.com
+# → HTTPS  
+# → Yes (authenticate Git)
+# → Login with a web browser
+
+# 認証確認
+gh auth status
 ```
 
-### 詳細ログで実行
+これで今後のgit操作（clone、push、pull）が認証なしで行えます。
+
+### Git 設定の確認
 ```bash
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass -v
-```
-
-### WSL環境の確認
-```bash
-# WSL検出確認
-cat /proc/version | grep -i microsoft && echo "This is WSL" || echo "This is not WSL"
-
-# SSH Agent確認
-ssh-add -l
-
-# GitHub接続テスト
-ssh -T git@github.com
-```
-
-## 📋 セットアップ後の確認
-
-```bash
-# 新しいシェルセッション開始
-zsh
-
-# 環境変数確認
-echo $SHELL    # /usr/bin/zsh
-echo $EDITOR   # nvim
-
 # Git設定確認
 git config --list --global
 
-# Neovim確認
-nvim --version
-
-# SSH設定確認
-cat ~/.ssh/config
+# SSH設定確認（SSH使用の場合）
+ssh -T git@github.com
 ```
 
-## 🔄 新しいマシンでの使用
+## 🚨 トラブルシューティング
 
-1. このリポジトリをクローン
-2. `vars.yml.example`を`vars.yml`にコピーして編集
-3. `ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass`を実行
+### WSL環境での問題
 
-数分で同じ開発環境が構築されます！
+#### GitHub CLI認証エラー
+```bash
+# ブラウザが開かない場合
+sudo apt install wslu
+export BROWSER="wslview"
 
-## 🤝 カスタマイズ
+# 手動認証の場合
+# → https://github.com/login/device にアクセス
+# → 表示されたワンタイムコードを入力
+```
 
-### 新しい開発言語の追加
-`group_vars/all.yml`の`development_environments`に言語を追加し、`roles/common/templates/gitignore.j2`にパターンを追加してください。
+#### SSH接続の問題（SSH使用時）
+```bash
+# SSH Agent確認
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
 
-### プラットフォーム固有設定の追加
-各プラットフォーム用のロール（`roles/wsl/`, `roles/macos/`）にタスクを追加してください。
+# 接続テスト
+ssh -T git@github.com
+```
 
-### パッケージの追加
-`group_vars/`の各ファイルでパッケージリストを編集してください。
+### 共通の問題
+
+#### Ansibleの依存関係エラー
+```bash
+# Ansible再インストール
+sudo apt update
+sudo apt install ansible
+
+# または macOS
+brew install ansible
+```
+
+#### 権限エラー
+```bash
+# sudoパスワードを確認して再実行
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass
+```
+
+#### Git設定の問題
+```bash
+# 設定を手動確認
+git config --global --list
+
+# 設定をリセット（必要な場合）
+git config --global --unset-all user.name
+git config --global --unset-all user.email
+```
+
+## 📁 プロジェクト構造
+
+```
+dev-env-ansible/
+├── README.md                    # このファイル
+├── playbook.yml                 # メインプレイブック
+├── inventory.yml                # インベントリ設定
+├── vars.yml.example            # 設定例
+├── group_vars/                  # グループ変数
+│   ├── all.yml                 # 全環境共通
+│   ├── wsl.yml                 # WSL専用
+│   └── macos.yml               # macOS専用
+└── roles/                       # 機能別ロール
+    ├── common/                 # 共通機能
+    │   ├── tasks/              # タスク定義
+    │   └── templates/          # 設定テンプレート
+    ├── wsl/                    # WSL専用機能
+    └── macos/                  # macOS専用機能
+```
 
 ## 📝 ライセンス
 
