@@ -1,0 +1,158 @@
+---
+- name: Setup Git and SSH Agent for WSL Development Environment
+  hosts: localhost
+  tasks:
+    - name: Get real user info (not root)
+      set_fact:
+        # SUDO_USERでsudoを実行した元のユーザーを取得
+        # 存在しない場合はログイン名を使用
+        target_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+      
+    - name: Set target home directory
+      set_fact:
+        target_home: "/home/{{ target_user }}"
+      
+    - name: Display target user info
+      debug:
+        msg: "Target user: {{ target_user }}, Home: {{ target_home }}"
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        upgrade: safe
+      become: yes
+
+    - name: Install basic packages
+      apt:
+        name:
+          - curl
+          - wget
+          - unzip
+          - socat
+          - iproute2
+          - git
+        state: present
+      become: yes
+
+    - name: Check if running in WSL
+      stat:
+        path: /proc/version
+      register: proc_version_file
+
+    - name: Read /proc/version to detect WSL
+      slurp:
+        src: /proc/version
+      register: proc_version
+      when: proc_version_file.stat.exists
+
+    - name: Set WSL detection fact
+      set_fact:
+        is_wsl: "{{ proc_version_file.stat.exists and ('microsoft' in (proc_version.content | b64decode | lower) or 'wsl' in (proc_version.content | b64decode | lower)) }}"
+
+    - name: Display environment type
+      debug:
+        msg: "Running in WSL: {{ is_wsl }}"
+
+    - name: Create .ssh directory
+      file:
+        path: "{{ target_home }}/.ssh"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0700'
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Download npiperelay for SSH Agent bridge (WSL only)
+      get_url:
+        url: https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip
+        dest: /tmp/npiperelay.zip
+      when: is_wsl
+      become: yes
+
+    - name: Extract npiperelay (WSL only)
+      unarchive:
+        src: /tmp/npiperelay.zip
+        dest: /tmp
+        remote_src: yes
+      when: is_wsl
+      become: yes
+
+    - name: Install npiperelay (WSL only)
+      copy:
+        src: /tmp/npiperelay.exe
+        dest: /usr/local/bin/npiperelay.exe
+        mode: '0755'
+        remote_src: yes
+      when: is_wsl
+      become: yes
+
+    - name: Clean up npiperelay zip file (WSL only)
+      file:
+        path: /tmp/npiperelay.zip
+        state: absent
+      when: is_wsl
+      become: yes
+
+    - name: Configure SSH Agent bridge in .bashrc (WSL only)
+      blockinfile:
+        path: "{{ target_home }}/.bashrc"
+        marker: "# {mark} SSH Agent Bridge"
+        block: |
+          # SSH Agent Bridge for WSL
+          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
+          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
+              rm -f $SSH_AUTH_SOCK
+              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+          fi
+        create: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      when: is_wsl
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Create SSH config for GitHub
+      blockinfile:
+        path: "{{ target_home }}/.ssh/config"
+        marker: "# {mark} GitHub SSH Config"
+        block: |
+          Host github.com
+              HostName github.com
+              User git
+              Port 22
+              IdentitiesOnly no
+              PreferredAuthentications publickey
+        create: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0600'
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Set Git user name
+      community.general.git_config:
+        name: user.name
+        value: "{{ git_user_name | default('Your Name') }}"
+        scope: global
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Set Git user email
+      community.general.git_config:
+        name: user.email
+        value: "{{ git_user_email | default('your-email@example.com') }}"
+        scope: global
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Display next steps
+      debug:
+        msg:
+          - "=== Setup Complete! ==="
+          - "Next steps:"
+          - "1. Exit WSL: exit"
+          - "2. Restart WSL: wsl --shutdown && wsl"
+          - "3. Test SSH: ssh-add -l"
+          - "4. Test GitHub: ssh -T git@github.com"

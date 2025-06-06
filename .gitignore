@@ -1,0 +1,21 @@
+# 個人設定ファイル
+vars.yml
+
+# Ansible関連
+*.retry
+.ansible/
+
+# 一時ファイル
+*.tmp
+*.log
+
+# OS固有ファイル
+.DS_Store
+Thumbs.db
+
+# エディタ設定
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
