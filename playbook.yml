@@ -127,46 +127,6 @@
       when: is_wsl
       become: yes
 
-    - name: Configure SSH Agent bridge in .bashrc (WSL only)
-      blockinfile:
-        path: "{{ target_home }}/.bashrc"
-        marker: "# {mark} SSH Agent Bridge"
-        block: |
-          # SSH Agent Bridge for WSL
-          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
-          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-              rm -f $SSH_AUTH_SOCK
-              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
-          fi
-        create: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-      when: is_wsl
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Configure SSH Agent bridge in .zshrc (WSL only)
-      blockinfile:
-        path: "{{ target_home }}/.zshrc"
-        marker: "# {mark} SSH Agent Bridge"
-        block: |
-          # SSH Agent Bridge for WSL
-          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
-          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
-              mkdir -p ~/.ssh
-              chmod 700 ~/.ssh
-              rm -f $SSH_AUTH_SOCK
-              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
-          fi
-        create: yes
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-      when: is_wsl
-      become: yes
-      become_user: "{{ target_user }}"
-
     - name: Create SSH config for GitHub
       blockinfile:
         path: "{{ target_home }}/.ssh/config"
@@ -245,38 +205,19 @@
       become: yes
       become_user: "{{ target_user }}"
 
-    - name: Clone Neovim configuration repository
-      git:
-        repo: git@github.com:kopug/neovim.git
-        dest: "{{ target_home }}/.config/nvim"
-        force: yes
-      become: yes
-      become_user: "{{ target_user }}"
-
-    - name: Create nvim configuration directory if not exists
-      file:
-        path: "{{ target_home }}/.config"
-        state: directory
-        owner: "{{ target_user }}"
-        group: "{{ target_user }}"
-        mode: '0755'
-      become: yes
-      become_user: "{{ target_user }}"
-
     - name: Change default shell to zsh
       user:
         name: "{{ target_user }}"
         shell: /bin/zsh
       become: yes
 
-    - name: Clone Prezto framework
-      git:
-        repo: git@github.com:sorin-ionescu/prezto.git
-        dest: "{{ target_home }}/.zprezto"
-        recursive: yes
-        force: yes
+    - name: Clone Prezto framework using shell
+      shell: |
+        git clone --recursive https://github.com/sorin-ionescu/prezto.git "{{ target_home }}/.zprezto"
       become: yes
       become_user: "{{ target_user }}"
+      args:
+        creates: "{{ target_home }}/.zprezto"
 
     - name: Create Prezto configuration symlinks
       file:
@@ -293,6 +234,26 @@
         - zprofile
         - zshenv
         - zshrc
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Configure SSH Agent bridge in .zshrc (WSL only)
+      blockinfile:
+        path: "{{ target_home }}/.zshrc"
+        marker: "# {mark} SSH Agent Bridge"
+        block: |
+          # SSH Agent Bridge for WSL
+          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
+          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
+              rm -f $SSH_AUTH_SOCK
+              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+          fi
+        create: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      when: is_wsl
       become: yes
       become_user: "{{ target_user }}"
 
@@ -313,6 +274,15 @@
         group: "{{ target_user }}"
       become: yes
       become_user: "{{ target_user }}"
+
+    - name: Clone Neovim configuration repository using shell
+      shell: |
+        mkdir -p "{{ target_home }}/.config"
+        git clone https://github.com/kopug/neovim.git "{{ target_home }}/.config/nvim"
+      become: yes
+      become_user: "{{ target_user }}"
+      args:
+        creates: "{{ target_home }}/.config/nvim"
 
     - name: Display next steps
       debug:
