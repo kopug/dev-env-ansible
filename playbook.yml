@@ -32,6 +32,26 @@
           - iproute2
           - git
           - vim
+          - software-properties-common
+          - build-essential
+          - zsh
+        state: present
+      become: yes
+
+    - name: Add Neovim unstable PPA
+      apt_repository:
+        repo: ppa:neovim-ppa/unstable
+        state: present
+      become: yes
+
+    - name: Update apt cache after adding PPA
+      apt:
+        update_cache: yes
+      become: yes
+
+    - name: Install Neovim
+      apt:
+        name: neovim
         state: present
       become: yes
 
@@ -53,6 +73,18 @@
     - name: Display environment type
       debug:
         msg: "Running in WSL: {{ is_wsl }}"
+
+    - name: Configure WSL settings to disable Windows PATH (WSL only)
+      copy:
+        dest: /etc/wsl.conf
+        content: |
+          [interop]
+          appendWindowsPath = false
+        owner: root
+        group: root
+        mode: '0644'
+      when: is_wsl
+      become: yes
 
     - name: Create .ssh directory
       file:
@@ -98,6 +130,26 @@
     - name: Configure SSH Agent bridge in .bashrc (WSL only)
       blockinfile:
         path: "{{ target_home }}/.bashrc"
+        marker: "# {mark} SSH Agent Bridge"
+        block: |
+          # SSH Agent Bridge for WSL
+          export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
+          if ! ss -a | grep -q $SSH_AUTH_SOCK; then
+              mkdir -p ~/.ssh
+              chmod 700 ~/.ssh
+              rm -f $SSH_AUTH_SOCK
+              (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+          fi
+        create: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      when: is_wsl
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Configure SSH Agent bridge in .zshrc (WSL only)
+      blockinfile:
+        path: "{{ target_home }}/.zshrc"
         marker: "# {mark} SSH Agent Bridge"
         block: |
           # SSH Agent Bridge for WSL
@@ -193,6 +245,75 @@
       become: yes
       become_user: "{{ target_user }}"
 
+    - name: Clone Neovim configuration repository
+      git:
+        repo: git@github.com:kopug/neovim.git
+        dest: "{{ target_home }}/.config/nvim"
+        force: yes
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Create nvim configuration directory if not exists
+      file:
+        path: "{{ target_home }}/.config"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: '0755'
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Change default shell to zsh
+      user:
+        name: "{{ target_user }}"
+        shell: /bin/zsh
+      become: yes
+
+    - name: Clone Prezto framework
+      git:
+        repo: git@github.com:sorin-ionescu/prezto.git
+        dest: "{{ target_home }}/.zprezto"
+        recursive: yes
+        force: yes
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Create Prezto configuration symlinks
+      file:
+        src: "{{ target_home }}/.zprezto/runcoms/{{ item }}"
+        dest: "{{ target_home }}/.{{ item }}"
+        state: link
+        force: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      loop:
+        - zlogin
+        - zlogout
+        - zpreztorc
+        - zprofile
+        - zshenv
+        - zshrc
+      become: yes
+      become_user: "{{ target_user }}"
+
+    - name: Set nvim as default editor in zshrc
+      blockinfile:
+        path: "{{ target_home }}/.zshrc"
+        marker: "# {mark} Neovim Editor Settings"
+        block: |
+          # Set Neovim as default editor
+          export EDITOR=nvim
+          export VISUAL=nvim
+          
+          # Neovim aliases
+          alias vi=nvim
+          alias vim=nvim
+        create: yes
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+      become: yes
+      become_user: "{{ target_user }}"
+
     - name: Display next steps
       debug:
         msg:
@@ -200,5 +321,11 @@
           - "Next steps:"
           - "1. Exit WSL: exit"
           - "2. Restart WSL: wsl --shutdown && wsl"
-          - "3. Test SSH: ssh-add -l"
-          - "4. Test GitHub: ssh -T git@github.com"
+          - "3. IMPORTANT: WSL will restart with Windows PATH disabled for better performance"
+          - "4. Test SSH: ssh-add -l"
+          - "5. Test GitHub: ssh -T git@github.com"
+          - "6. Start Neovim: nvim"
+          - "7. Lazy.nvim will automatically install plugins on first run"
+          - "8. Zsh with Prezto is now your default shell"
+          - "9. Configure Prezto modules in ~/.zpreztorc if needed"
+          - "10. Tab completion should now be much faster!"
