@@ -4,10 +4,36 @@
 
 ## 🚀 クイックスタート
 
+### 初回セットアップ（認証方法を選択）
+
+#### Option A: Personal Access Token を使用
 ```bash
-# リポジトリをクローン
-git clone https://github.com/kopug/dev-env-ansible.git
+# 1. GitHub で Personal Access Token を作成
+# GitHub → Settings → Developer settings → Personal access tokens → Generate new token
+# Scopes: 'repo' にチェックを入れる
+
+# 2. トークンを使ってクローン
+git clone https://kopug:YOUR_TOKEN@github.com/kopug/dev-env-ansible.git
 cd dev-env-ansible
+```
+
+#### Option B: SSH Key を使用  
+```bash
+# 1. SSH鍵を生成
+ssh-keygen -t ed25519 -C "your-email@example.com"
+
+# 2. 公開鍵をコピー
+cat ~/.ssh/id_ed25519.pub
+
+# 3. GitHub → Settings → SSH and GPG keys → New SSH key で公開鍵を追加
+
+# 4. SSH経由でクローン
+git clone git@github.com:kopug/dev-env-ansible.git
+cd dev-env-ansible
+```
+
+### セットアップ実行
+```bash
 
 # 設定ファイルをコピー
 cp vars.yml.example vars.yml
@@ -61,7 +87,7 @@ ansible-playbook -i inventory.yml playbook.yml --list-tags
 ## 📁 プロジェクト構造
 
 ```
-dev-env-ansible/
+ansible/
 ├── group_vars/          # グループ変数
 │   ├── all.yml         # 全プラットフォーム共通設定
 │   ├── wsl.yml         # WSL固有設定
@@ -191,7 +217,3 @@ cat ~/.ssh/config
 ## 📝 ライセンス
 
 MIT License
-
-## 🙋‍♂️ サポート
-
-質問や問題がある場合は、GitHubのIssuesでお知らせください。
