@@ -20,6 +20,19 @@ WSL環境でGitとBitwarden SSH Agentを自動セットアップするためのA
 
 ## インストール
 
+### 0. Ansibleのインストール
+
+```bash
+# システムパッケージの更新
+sudo apt update
+
+# Ansibleのインストール
+sudo apt install -y ansible
+
+# バージョン確認
+ansible --version
+```
+
 ### 1. リポジトリのクローン
 
 ```bash
