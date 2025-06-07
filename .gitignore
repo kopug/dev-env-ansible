@@ -4,6 +4,7 @@ vars.yml
 # Ansible関連
 *.retry
 .ansible/
+fix-scripts/
 
 # 一時ファイル
 *.tmp

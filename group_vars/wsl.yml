@@ -11,7 +11,7 @@ npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/
 npiperelay_install_path: "/usr/local/bin/npiperelay.exe"
 
 # WSL設定（wsl.conf.j2で実際に使用される変数のみ）
-wsl_systemd: false
+wsl_systemd: true
 wsl_generate_hosts: true
 wsl_generate_resolv_conf: true
 
