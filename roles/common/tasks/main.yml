@@ -1,54 +1,21 @@
 ---
-- name: Install common packages
-  apt:
-    name: ["curl", "wget", "unzip", "git", "vim", "zsh"]
-    state: present
-  become: yes
-  when: ansible_system == "Linux"
-  ignore_errors: yes
+- name: Install base packages
+  include_tasks: "install_packages_{{ ansible_system | lower }}.yml"
   tags: packages
 
-- name: Create .ssh directory
-  file:
-    path: "{{ ansible_env.HOME }}/.ssh"
-    state: directory
-    mode: '0700'
+- name: Setup SSH configuration
+  include_tasks: setup_ssh.yml
   tags: ssh
 
-- name: Create SSH config for GitHub
-  template:
-    src: ssh_config.j2
-    dest: "{{ ansible_env.HOME }}/.ssh/config"
-    mode: '0600'
-  tags: ssh
-
-- name: Copy complete gitconfig from template
-  template:
-    src: gitconfig.j2
-    dest: "{{ ansible_env.HOME }}/.gitconfig"
-    mode: '0644'
+- name: Setup Git configuration
+  include_tasks: setup_git.yml
   tags: git
 
-- name: Create global gitignore from template
-  template:
-    src: gitignore.j2
-    dest: "{{ ansible_env.HOME }}/.gitignore"
-    mode: '0644'
-  tags: git
-
-- name: Install Neovim
-  include_tasks: "install_neovim_{{ ansible_system | lower }}.yml"
+- name: Setup Neovim
+  include_tasks: setup_neovim.yml
   tags: neovim
 
 - name: Setup shell environment
   include_tasks: setup_shell.yml
   when: ansible_system == "Linux"
   tags: shell
-
-- name: Clone Neovim configuration
-  git:
-    repo: "{{ neovim_config_repo }}"
-    dest: "{{ ansible_env.HOME }}/.config/nvim"
-    update: yes
-  ignore_errors: yes
-  tags: neovim

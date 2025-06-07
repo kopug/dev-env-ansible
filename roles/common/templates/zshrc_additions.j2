@@ -1,34 +1,28 @@
 {% if ansible_system == "Linux" and is_wsl %}
 # SSH Agent Bridge for WSL
 export SSH_AUTH_SOCK=$HOME/.ssh/agent.sock
-if ! ss -a | grep -q $SSH_AUTH_SOCK; then
-    mkdir -p ~/.ssh
-    chmod 700 ~/.ssh
+ss -a | grep -q $SSH_AUTH_SOCK || {
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh
     rm -f $SSH_AUTH_SOCK
-    (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"/usr/local/bin/npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
-fi
-{% elif ansible_system == "Darwin" %}
-# macOS SSH Agent (using system ssh-agent)
-if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval "$(ssh-agent -s)"
-fi
+    (setsid socat UNIX-LISTEN:$SSH_AUTH_SOCK,fork EXEC:"{{ npiperelay.install_path }} -ei -s //./pipe/openssh-ssh-agent",nofork &) >/dev/null 2>&1
+}
 {% endif %}
 
-# Set Neovim as default editor
-export EDITOR={{ editor | default('nvim') }}
-export VISUAL={{ editor | default('nvim') }}
+# Editor configuration
+export EDITOR={{ editor }}
+export VISUAL={{ editor }}
 
 # Editor aliases
-alias vi={{ editor | default('nvim') }}
-alias vim={{ editor | default('nvim') }}
+alias vi={{ editor }}
+alias vim={{ editor }}
 
-# Platform specific aliases
-{% if ansible_system == "Linux" %}
-alias ll='ls -alF'
-alias la='ls -A'
-alias l='ls -CF'
-{% elif ansible_system == "Darwin" %}
+# Useful aliases
+{% if ansible_system == "Darwin" %}
 alias ll='ls -alFG'
 alias la='ls -AG'
 alias l='ls -CFG'
+{% else %}
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
 {% endif %}

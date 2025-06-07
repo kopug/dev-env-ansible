@@ -1,9 +1,4 @@
 ---
-- name: Install Homebrew packages
-  homebrew:
-    name: "{{ macos_packages }}"
-    state: present
-
 - name: Ensure Homebrew is in PATH
   lineinfile:
     path: "{{ ansible_env.HOME }}/.zprofile"

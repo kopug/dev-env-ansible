@@ -1,9 +1,9 @@
 [interop]
-appendWindowsPath = false
+appendWindowsPath = {{ wsl_config.append_windows_path | default('false') }}
 
 [boot]
-systemd = {{ wsl_systemd | default('false') }}
+systemd = {{ wsl_config.systemd | default('false') }}
 
 [network]
-generateHosts = {{ wsl_generate_hosts | default('true') }}
-generateResolvConf = {{ wsl_generate_resolv_conf | default('true') }}
+generateHosts = {{ wsl_config.generate_hosts | default('true') }}
+generateResolvConf = {{ wsl_config.generate_resolv_conf | default('true') }}

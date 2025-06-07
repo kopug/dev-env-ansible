@@ -1,7 +1,0 @@
----
-# macOS固有パッケージ
-macos_packages:
-  - zsh
-  - socat
-  - neovim
-  - git

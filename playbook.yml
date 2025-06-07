@@ -3,6 +3,7 @@
   hosts: localhost
   connection: local
   gather_facts: yes
+
   pre_tasks:
     - name: Check if /proc/version exists (for WSL detection)
       stat:
@@ -24,8 +25,7 @@
           {{
             ansible_system == "Linux" and
             proc_version_file.stat.exists and
-            ('microsoft' in (proc_version_content.content | b64decode | lower) or
-             'wsl' in (proc_version_content.content | b64decode | lower))
+            (proc_version_content.content | b64decode | lower | regex_search('microsoft|wsl') is not none)
           }}
       when: ansible_system == "Linux"
       tags: always
@@ -52,11 +52,11 @@
     - role: wsl
       when: ansible_system == "Linux" and is_wsl
       tags: wsl
-    - role: macos
+    - role: darwin
       when: ansible_system == "Darwin"
-      tags: macos
+      tags: darwin
     - role: docker
-      when: ansible_system == "Linux" and is_wsl and docker_enabled | default(false)
+      when: ansible_system == "Linux" and is_wsl and features.docker | default(true)
       tags: docker
 
   post_tasks:
@@ -70,5 +70,5 @@
           - "2. Test SSH: ssh-add -l"
           - "3. Test GitHub: ssh -T git@github.com"
           - "4. Start Neovim: nvim"
-          - "{{ '5. Test Docker: docker run hello-world' if (ansible_system == 'Linux' and is_wsl and docker_enabled | default(false)) else '' }}"
+          - "{{ '5. Test Docker: docker run hello-world' if (ansible_system == 'Linux' and is_wsl and features.docker | default(true)) else '' }}"
       tags: always

@@ -21,3 +21,9 @@ custom_gitignore_patterns:
   - "*.local" 
   - ".env.local"
   # 必要に応じて追加
+
+# 機能フラグ（オプション - デフォルト値を上書きする場合のみ設定）
+# features:
+#   github_cli: false
+#   docker: false
+#   systemd: false

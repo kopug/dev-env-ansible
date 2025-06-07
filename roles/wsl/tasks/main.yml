@@ -1,40 +1,40 @@
 ---
 - name: Install WSL-specific packages
   apt:
-    name: "{{ wsl_packages }}"
-    state: present
-  become: yes
-  ignore_errors: yes
-  tags: packages
-
-- name: Add GitHub CLI repository key
-  apt_key:
-    url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
-    keyring: /usr/share/keyrings/githubcli-archive-keyring.gpg
-    state: present
-  become: yes
-  ignore_errors: yes
-  tags: github-cli
-
-- name: Add GitHub CLI repository
-  apt_repository:
-    repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
-    filename: github-cli
-    state: present
-  become: yes
-  ignore_errors: yes
-  tags: github-cli
-
-- name: Install GitHub CLI and WSL utilities
-  apt:
-    name:
-      - gh
-      - wslu
+    name: "{{ wsl_specific_packages }}"
     state: present
     update_cache: yes
   become: yes
-  ignore_errors: yes
-  tags: github-cli
+
+- name: Setup GitHub CLI repository
+  block:
+    - name: Add GitHub CLI repository key
+      get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /usr/share/keyrings/githubcli-archive-keyring.gpg
+        mode: '0644'
+      become: yes
+
+    - name: Add GitHub CLI repository
+      apt_repository:
+        repo: "deb [arch={{ ansible_architecture }} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+        filename: github-cli
+        state: present
+      become: yes
+
+    - name: Install GitHub CLI
+      apt:
+        name: gh
+        state: present
+        update_cache: yes
+      become: yes
+
+  rescue:
+    - name: GitHub CLI installation failed
+      debug:
+        msg: "GitHub CLI installation failed - continuing without it"
+  
+  when: features.github_cli | default(true)
 
 - name: Configure WSL settings
   template:
@@ -44,44 +44,30 @@
     group: root
     mode: '0644'
   become: yes
-  ignore_errors: yes
-  tags: config
 
 - name: Check if npiperelay already exists
   stat:
-    path: "{{ npiperelay_install_path }}"
+    path: "{{ npiperelay.install_path }}"
   register: npiperelay_exists
-  tags: npiperelay
 
-- name: Download and install npiperelay (combined task for reliability)
+- name: Download and install npiperelay
   shell: |
-    if [ ! -f "{{ npiperelay_install_path }}" ]; then
+    if [ ! -f "{{ npiperelay.install_path }}" ]; then
       echo "Installing npiperelay..."
       cd /tmp
-      curl -L -o npiperelay.zip "{{ npiperelay_url }}" || exit 1
+      curl -L -o npiperelay.zip "{{ npiperelay.url }}" || exit 1
       unzip -o npiperelay.zip || exit 1
-      sudo cp npiperelay.exe "{{ npiperelay_install_path }}" || exit 1
-      sudo chmod +x "{{ npiperelay_install_path }}" || exit 1
+      sudo cp npiperelay.exe "{{ npiperelay.install_path }}" || exit 1
+      sudo chmod +x "{{ npiperelay.install_path }}" || exit 1
       rm -f npiperelay.zip npiperelay.exe
       echo "npiperelay installed successfully"
     else
       echo "npiperelay already exists"
     fi
   args:
-    creates: "{{ npiperelay_install_path }}"
+    creates: "{{ npiperelay.install_path }}"
   ignore_errors: yes
-  tags: npiperelay
-
-- name: Verify npiperelay installation
-  stat:
-    path: "{{ npiperelay_install_path }}"
-  register: npiperelay_final_check
-  tags: npiperelay
-
-- name: Display npiperelay installation status
-  debug:
-    msg: "npiperelay installation: {{ 'SUCCESS' if npiperelay_final_check.stat.exists else 'FAILED' }}"
-  tags: npiperelay
+  when: not npiperelay_exists.stat.exists
 
 - name: Add BROWSER environment variable to shell configuration
   lineinfile:
@@ -90,22 +76,13 @@
     regexp: '^export BROWSER='
     state: present
     create: yes
-  ignore_errors: yes
-  tags: shell
 
 - name: Display GitHub CLI setup instructions
   debug:
     msg:
       - "=== GitHub CLI Setup ==="
-      - "GitHub CLI has been installed successfully!"
-      - "To authenticate with GitHub:"
+      - "To authenticate with GitHub after installation:"
       - "1. Run: gh auth login"
-      - "2. Select: GitHub.com"
-      - "3. Select: HTTPS"  
-      - "4. Select: Yes (authenticate Git)"
-      - "5. Select: Login with a web browser"
-      - "6. Follow the browser instructions"
-      - ""
-      - "After authentication, you can clone repositories without tokens:"
-      - "git clone https://github.com/username/repository.git"
-  tags: github-cli
+      - "2. Select: GitHub.com → HTTPS → Yes → Login with a web browser"
+      - "3. Follow the browser instructions"
+  when: features.github_cli | default(true)

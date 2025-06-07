@@ -1,23 +1,20 @@
 ---
-# WSL固有パッケージ
-wsl_packages:
+# WSL固有パッケージのみ
+wsl_specific_packages:
   - socat
   - iproute2
   - dnsutils
   - net-tools
+  - wslu
 
 # npiperelay設定
-npiperelay_url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
-npiperelay_install_path: "/usr/local/bin/npiperelay.exe"
+npiperelay:
+  url: "https://github.com/jstarks/npiperelay/releases/latest/download/npiperelay_windows_amd64.zip"
+  install_path: "/usr/local/bin/npiperelay.exe"
 
-# WSL設定（wsl.conf.j2で実際に使用される変数のみ）
-wsl_systemd: true
-wsl_generate_hosts: true
-wsl_generate_resolv_conf: true
-
-# GitHub CLI設定
-github_cli_enabled: true
-
-# Docker 設定
-docker_enabled: true
-docker_compose_enabled: true
+# WSL設定
+wsl_config:
+  systemd: true
+  generate_hosts: true
+  generate_resolv_conf: true
+  append_windows_path: false

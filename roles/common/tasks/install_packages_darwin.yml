@@ -1,0 +1,13 @@
+---
+- name: Ensure Homebrew is installed
+  shell: |
+    if ! command -v brew >/dev/null 2>&1; then
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+  args:
+    creates: /opt/homebrew/bin/brew
+
+- name: Install packages via Homebrew
+  homebrew:
+    name: "{{ base_packages.common + base_packages.macos }}"
+    state: present

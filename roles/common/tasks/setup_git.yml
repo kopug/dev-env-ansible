@@ -1,0 +1,13 @@
+---
+- name: Setup Git configuration
+  template:
+    src: gitconfig.j2
+    dest: "{{ ansible_env.HOME }}/.gitconfig"
+    mode: '0644'
+    backup: yes
+
+- name: Setup global gitignore
+  template:
+    src: gitignore.j2
+    dest: "{{ ansible_env.HOME }}/.gitignore"
+    mode: '0644'

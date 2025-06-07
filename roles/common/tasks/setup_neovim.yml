@@ -1,0 +1,11 @@
+---
+- name: Install Neovim
+  include_tasks: "install_neovim_{{ ansible_system | lower }}.yml"
+
+- name: Clone Neovim configuration
+  git:
+    repo: "{{ neovim_config_repo }}"
+    dest: "{{ ansible_env.HOME }}/.config/nvim"
+    update: yes
+    force: yes
+  when: neovim_config_repo is defined
