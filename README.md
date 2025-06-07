@@ -10,7 +10,7 @@
 - **🔐 GitHub CLI 統合**: WSL環境での認証を自動化
 - **⚡ 完全自動化**: 一度のコマンドで開発環境が整う
 - **📝 Git設定の完全管理**: エイリアス、設定を含む完全な`.gitconfig`
-- **🧩 モジュラー設計**: 必要な機能だけを選択して実行可能
+- **🧩 モジュラー設計**: 機能別に分離されたタスク構造
 - **🔒 冪等性保証**: 何度実行しても安全
 
 ## 🚀 クイックスタート
@@ -102,6 +102,12 @@ custom_gitignore_patterns:
   - "# Project specific"
   - "*.local" 
   - ".env.local"
+
+# 機能フラグ（オプション - デフォルト値を上書きする場合のみ設定）
+features:
+  github_cli: false    # GitHub CLI を無効化
+  docker: false        # Docker インストールを無効化
+  systemd: false       # systemd 設定を無効化
 ```
 
 ## 🎯 セレクティブ実行
@@ -116,7 +122,7 @@ ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-be
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags docker
 
 # GitHub CLI設定のみ (WSL)
-ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags github-cli
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags wsl
 
 # Neovim設定のみ
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags neovim
@@ -124,8 +130,6 @@ ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-be
 # シェル設定のみ
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags shell
 ```
-
-
 
 ## 🐳 Docker 環境（WSL）
 
@@ -190,10 +194,7 @@ ssh -T git@github.com
 # systemd状態確認
 systemctl --version
 
-# group_vars/wsl.yml でwsl_systemd: trueに変更
-vim group_vars/wsl.yml
-
-# プレイブック実行
+# features.systemd: true に設定してプレイブック実行
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags wsl
 
 # WSL再起動が必要
@@ -251,15 +252,19 @@ dev-env-ansible/
 ├── vars.yml.example            # 設定例
 
 ├── group_vars/                  # グループ変数
-│   ├── all.yml                 # 全環境共通
-│   ├── wsl.yml                 # WSL専用
-│   └── macos.yml               # macOS専用
+│   ├── all.yml                 # 全環境共通設定
+│   ├── wsl.yml                 # WSL専用設定
+│   └── darwin.yml              # macOS専用設定
+
 └── roles/                       # 機能別ロール
     ├── common/                 # 共通機能
     │   ├── tasks/              # タスク定義
+    │   │   ├── main.yml        # メインタスク
+    │   │   ├── setup_*.yml     # 機能別設定タスク
+    │   │   └── install_*.yml   # インストールタスク
     │   └── templates/          # 設定テンプレート
     ├── wsl/                    # WSL専用機能
-    ├── macos/                  # macOS専用機能
+    ├── darwin/                 # macOS専用機能
     └── docker/                 # Docker CE インストール
         ├── tasks/
         └── handlers/
@@ -287,10 +292,6 @@ git pull origin main
 # 新機能を適用
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass
 ```
-
-## 🤝 コントリビューション
-
-Issue や Pull Request を歓迎します！新しい開発環境やツールの追加提案もお気軽にどうぞ。
 
 ## 📝 ライセンス
 
