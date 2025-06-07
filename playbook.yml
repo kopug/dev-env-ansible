@@ -55,6 +55,9 @@
     - role: macos
       when: ansible_system == "Darwin"
       tags: macos
+    - role: docker
+      when: ansible_system == "Linux" and is_wsl and docker_enabled | default(false)
+      tags: docker
 
   post_tasks:
     - name: Display completion message
@@ -67,4 +70,5 @@
           - "2. Test SSH: ssh-add -l"
           - "3. Test GitHub: ssh -T git@github.com"
           - "4. Start Neovim: nvim"
+          - "{{ '5. Test Docker: docker run hello-world' if (ansible_system == 'Linux' and is_wsl and docker_enabled | default(false)) else '' }}"
       tags: always

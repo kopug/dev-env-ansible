@@ -1,0 +1,142 @@
+---
+- name: Remove conflicting Docker packages
+  apt:
+    name:
+      - docker.io
+      - docker-doc
+      - docker-compose
+      - docker-compose-v2
+      - podman-docker
+      - containerd
+      - runc
+    state: absent
+  become: yes
+  ignore_errors: yes
+  tags: docker-cleanup
+
+- name: Install prerequisites for Docker repository
+  apt:
+    name:
+      - ca-certificates
+      - curl
+    state: present
+    update_cache: yes
+  become: yes
+  tags: docker-prereq
+
+- name: Create keyring directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  become: yes
+  tags: docker-prereq
+
+- name: Add Docker GPG key
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+  become: yes
+  tags: docker-repo
+
+- name: Get architecture
+  command: dpkg --print-architecture
+  register: system_architecture
+  changed_when: false
+  tags: docker-repo
+
+- name: Get Ubuntu codename
+  shell: . /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}"
+  register: ubuntu_codename
+  changed_when: false
+  tags: docker-repo
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch={{ system_architecture.stdout }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ubuntu_codename.stdout }} stable"
+    filename: docker
+    state: present
+  become: yes
+  tags: docker-repo
+
+- name: Update apt cache after adding Docker repository
+  apt:
+    update_cache: yes
+  become: yes
+  tags: docker-repo
+
+- name: Install Docker packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+  become: yes
+  notify: restart docker
+  tags: docker-install
+
+- name: Create docker group
+  group:
+    name: docker
+    state: present
+  become: yes
+  tags: docker-group
+
+- name: Add user to docker group
+  user:
+    name: "{{ ansible_user_id }}"
+    groups: docker
+    append: yes
+  become: yes
+  tags: docker-group
+
+- name: Start and enable Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+  tags: docker-service
+
+- name: Fix docker socket permissions (if needed)
+  file:
+    path: /var/run/docker.sock
+    group: docker
+    mode: '0664'
+  become: yes
+  ignore_errors: yes
+  tags: docker-permissions
+
+- name: Check if user config directory exists
+  stat:
+    path: "{{ ansible_env.HOME }}/.docker"
+  register: docker_config_dir
+  tags: docker-permissions
+
+- name: Fix docker config directory permissions
+  file:
+    path: "{{ ansible_env.HOME }}/.docker"
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+    mode: '0755'
+    recurse: yes
+  become: yes
+  when: docker_config_dir.stat.exists
+  ignore_errors: yes
+  tags: docker-permissions
+
+- name: Display Docker installation completion message
+  debug:
+    msg:
+      - "=== Docker Installation Complete! ==="
+      - "Docker CE has been installed and configured."
+      - "Your user has been added to the docker group."
+      - "Please log out and log back in to apply group changes."
+      - "After re-login, test with: docker run hello-world"
+      - ""
+      - "Docker Compose is also available as 'docker compose'"
+  tags: docker-install

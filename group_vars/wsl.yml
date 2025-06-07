@@ -17,3 +17,7 @@ wsl_generate_resolv_conf: true
 
 # GitHub CLI設定
 github_cli_enabled: true
+
+# Docker 設定
+docker_enabled: true
+docker_compose_enabled: true
