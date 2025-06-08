@@ -1,0 +1,102 @@
+---
+- name: Check if Volta is already installed
+  stat:
+    path: "{{ ansible_env.HOME }}/.volta/bin/volta"
+  register: volta_binary
+
+- name: Install Volta
+  shell: |
+    curl {{ volta.install_script_url }} | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.volta/bin/volta"
+  when: not volta_binary.stat.exists
+
+- name: Verify Volta installation
+  stat:
+    path: "{{ ansible_env.HOME }}/.volta/bin/volta"
+  register: volta_installed
+
+- name: Add Volta to PATH for current session
+  set_fact:
+    ansible_env: "{{ ansible_env | combine({'PATH': ansible_env.HOME + '/.volta/bin:' + ansible_env.PATH}) }}"
+  when: volta_installed.stat.exists
+
+- name: Install default Node.js version via Volta
+  shell: "{{ ansible_env.HOME }}/.volta/bin/volta install node@{{ volta.default_node_version }}"
+  when: volta_installed.stat.exists
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  register: node_install_result
+
+- name: Check if Node.js was installed successfully
+  shell: "{{ ansible_env.HOME }}/.volta/bin/volta list node"
+  when: volta_installed.stat.exists
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  register: volta_node_list
+  ignore_errors: yes
+
+- name: Set default Node.js version explicitly
+  shell: "{{ ansible_env.HOME }}/.volta/bin/volta install node@{{ volta.default_node_version }}"
+  when: 
+    - volta_installed.stat.exists
+    - volta_node_list is defined
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  ignore_errors: yes
+
+- name: Check if npm is already managed by Volta
+  shell: "{{ ansible_env.HOME }}/.volta/bin/volta list npm"
+  when: volta_installed.stat.exists
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  register: volta_npm_list
+  ignore_errors: yes
+  changed_when: false
+
+- name: Install npm via Volta (only if Node.js is installed and npm not already managed)
+  shell: "{{ ansible_env.HOME }}/.volta/bin/volta install npm"
+  when: 
+    - volta_installed.stat.exists
+    - node_install_result is defined
+    - volta_npm_list.rc != 0  # npm not yet managed by Volta
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  ignore_errors: yes
+
+- name: Verify Volta setup
+  shell: |
+    echo "=== Volta Verification ==="
+    {{ ansible_env.HOME }}/.volta/bin/volta --version
+    echo "=== Node.js Version ==="
+    {{ ansible_env.HOME }}/.volta/bin/node --version 2>/dev/null || echo "Node.js not available"
+    echo "=== NPM Version ==="
+    {{ ansible_env.HOME }}/.volta/bin/npm --version 2>/dev/null || echo "NPM not available"
+    echo "=== Volta List ==="
+    {{ ansible_env.HOME }}/.volta/bin/volta list 2>/dev/null || echo "No tools installed"
+  when: volta_installed.stat.exists
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.volta/bin:{{ ansible_env.PATH }}"
+  register: volta_verification
+  changed_when: false
+
+- name: Display Volta verification results
+  debug:
+    var: volta_verification.stdout_lines
+  when: volta_verification is defined
+
+- name: Display Volta installation status
+  debug:
+    msg:
+      - "=== Volta Installation Status ==="
+      - "Volta binary: {{ 'Installed' if volta_installed.stat.exists else 'Not found' }}"
+      - "Location: {{ ansible_env.HOME }}/.volta/bin/volta"
+      - "Default Node.js: {{ volta.default_node_version }}"
+      - ""
+      - "After completing the setup, restart your shell and run:"
+      - "  volta --version"
+      - "  node --version"
+      - "  npm --version"
+      - ""
+      - "Note: npm comes bundled with Node.js. If npm installation fails,"
+      - "you can still use the npm that comes with Node.js."

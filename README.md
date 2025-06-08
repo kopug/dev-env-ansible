@@ -1,11 +1,12 @@
 # 🛠️ Development Environment Setup with Ansible
 
-このリポジトリは、Ansible を使用して開発環境を自動セットアップするためのプレイブックです。macOS と WSL (Windows Subsystem for Linux) の両方に対応し、Docker も含む完全な開発環境を構築できます。
+このリポジトリは、Ansible を使用して開発環境を自動セットアップするためのプレイブックです。macOS と WSL (Windows Subsystem for Linux) の両方に対応し、Docker と Volta（Node.js管理）も含む完全な開発環境を構築できます。
 
 ## ✨ 特徴
 
 - **🖥️ クロスプラットフォーム対応**: macOS と WSL の両方をサポート
 - **🐳 Docker CE 統合**: WSL環境での完全なDocker開発環境
+- **⚡ Volta統合**: 高速なNode.jsバージョン管理
 - **🔧 systemd サポート**: WSLでのsystemd有効化とサービス管理
 - **🔐 GitHub CLI 統合**: WSL環境での認証を自動化
 - **⚡ 完全自動化**: 一度のコマンドで開発環境が整う
@@ -54,6 +55,7 @@ brew install ansible
 - **Neovim**: エディタとプラグイン環境
 - **Zsh + Prezto**: 強化されたシェル環境
 - **開発ツール**: 基本的なコマンドラインツール
+- **Volta**: 高速なJavaScript toolchain管理（Node.js LTS版、npm、プロジェクト自動切り替え）
 
 ### WSL 固有
 - **systemd**: サービス管理とDocker統合
@@ -118,6 +120,9 @@ features:
 # Git設定のみ
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags git
 
+# Volta設定のみ
+ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags volta
+
 # Docker設定のみ (WSL)
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags docker
 
@@ -129,6 +134,53 @@ ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-be
 
 # シェル設定のみ
 ansible-playbook -i inventory.yml playbook.yml --extra-vars "@vars.yml" --ask-become-pass --tags shell
+```
+
+## ⚡ Volta の使用方法
+
+### 基本的な使用方法
+セットアップ後、Voltaで管理されたNode.jsとnpmが利用できます：
+
+```bash
+# バージョン確認
+volta --version
+node --version   # LTS版がインストール済み
+npm --version
+
+# 特定バージョンをインストール
+volta install node@18.17.0
+volta install node@20.12.0
+
+# インストール済みのツールを確認
+volta list
+```
+
+### プロジェクトでのバージョン管理
+```bash
+# プロジェクトディレクトリで特定バージョンを固定
+cd your-project
+volta pin node@18.17.0
+volta pin npm@9.6.7
+
+# package.jsonに設定が自動保存される
+cat package.json
+# {
+#   "volta": {
+#     "node": "18.17.0",
+#     "npm": "9.6.7"
+#   }
+# }
+```
+
+### 自動バージョン切り替え
+プロジェクトディレクトリに移動すると、Voltaが自動的に適切なバージョンに切り替えます：
+
+```bash
+cd ~/project-a  # Node.js 18.17.0に自動切り替え
+node --version  # v18.17.0
+
+cd ~/project-b  # Node.js 20.12.0に自動切り替え
+node --version  # v20.12.0
 ```
 
 ## 🐳 Docker 環境（WSL）
@@ -186,6 +238,60 @@ ssh -T git@github.com
 ```
 
 ## 🚨 トラブルシューティング
+
+### Volta関連の問題
+
+#### Voltaが認識されない場合
+```bash
+# シェルを再起動
+exec $SHELL
+
+# または、手動でPATHを設定
+export VOLTA_HOME="$HOME/.volta"
+export PATH="$VOLTA_HOME/bin:$PATH"
+
+# 設定の永続化確認
+echo $PATH | grep volta
+```
+
+#### Node.js/npmのバージョン確認
+```bash
+# Voltaで管理されているツールを確認
+volta list
+
+# 現在のバージョン確認
+volta --version
+node --version
+npm --version
+
+# どのバイナリが使用されているか確認
+which node
+which npm
+```
+
+#### npmが見つからない場合
+Node.jsにはnpmが同梱されているため、通常は追加インストール不要です：
+
+```bash
+# Node.jsと同梱のnpmを使用
+node --version  # これが表示されればnpmも利用可能
+npm --version   # npmバージョン確認
+
+# 必要に応じてVoltaでnpmを明示的にインストール
+volta install npm
+```
+
+#### プロジェクトでVoltaが効かない場合
+```bash
+# package.jsonのvolta設定を確認
+cat package.json | grep -A5 "volta"
+
+# 設定されていない場合は手動で追加
+volta pin node@18.17.0
+
+# 強制的にバージョンを確認
+volta run node --version
+```
 
 ### WSL環境での問題
 

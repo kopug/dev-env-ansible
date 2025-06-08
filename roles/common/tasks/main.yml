@@ -15,6 +15,10 @@
   include_tasks: setup_neovim.yml
   tags: neovim
 
+- name: Setup Volta (Node.js version manager)
+  include_tasks: setup_volta.yml
+  tags: volta
+
 - name: Setup shell environment
   include_tasks: setup_shell.yml
   when: ansible_system == "Linux"
